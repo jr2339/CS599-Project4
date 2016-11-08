@@ -33,12 +33,15 @@ typedef struct CAMERA {
     double height;
 } CAMERA;
 
-
+//Add new attribute
 typedef struct SPHERE {
     double *diff_color;
     double *spec_color;
     double *position;
     double radius;
+    double reflect;
+    double refract;
+    double ior;
 } SPHERE;
 
 
@@ -48,6 +51,9 @@ typedef struct PLANE {
     double *spec_color;     // specular color
     double *position;
     double *normal;
+    double reflect;
+    double refract;
+    double ior;
 } PLANE;
 
 
@@ -56,6 +62,9 @@ typedef struct QUADRIC {
     double *spec_color;
     double *position;
     double *coefficient;
+    double reflect;
+    double refract;
+    double ior;
 } QUADRIC;
 
 

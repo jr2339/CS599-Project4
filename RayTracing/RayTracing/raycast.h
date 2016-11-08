@@ -32,4 +32,6 @@ double sphere_intersection(Ray *ray, double *C, double r);
 double quadric_intersection(Ray *ray, double *Co,double* Position);
 void raycast_scene(Image *image, double cam_width, double cam_height, OBJECT *object);
 void get_quadric_normal(double* normal,double *Coefficient,double *Position);
+void reflection_vector(Vector direction, Vector position, int obj_index, Vector reflection);
+void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, double max_dist, Vector color);
 #endif /* raycast_h */

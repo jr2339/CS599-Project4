@@ -83,15 +83,7 @@ void Vector_reflect(Vector v, Vector n, Vector v_r){
 
 
 
-/*
-void Vector_Unit(Vector in, Vector out){
-    double len = Vector_len(in);
-    out[0] = in[0]/len;
-    out[1] = in[1]/len;
-    out[2] = in[2]/len;
-    
-}
-*/
+
 
 
 

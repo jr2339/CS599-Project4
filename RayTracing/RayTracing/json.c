@@ -448,6 +448,48 @@ void read_scene(const char* filename) {
                         }
                         
                     }
+                    else if (strcmp(key, "reflectivity") == 0) {
+                        if (object_type == PLAN) {
+                           objects[object_counter].plane.reflect = next_number(json);
+                        }
+                        else if(object_type == SPH){
+                            objects[object_counter].sphere.reflect = next_number(json);
+                        }
+                        else if (object_type == QUAD){
+                            objects[object_counter].quadric.reflect = next_number(json);
+                        }
+                        else
+                            fprintf(stderr, "Error: read_json: Reflectivity can't be applied here: %d\n", line);
+                            exit(1);
+                    }
+                    else if (strcmp(key, "refractivity") == 0) {
+                        if (object_type == PLAN) {
+                            objects[object_counter].plane.refract = next_number(json);
+                        }
+                        else if(object_type == SPH){
+                            objects[object_counter].sphere.refract = next_number(json);
+                        }
+                        else if (object_type == QUAD){
+                            objects[object_counter].quadric.refract = next_number(json);
+                        }
+                        else
+                            fprintf(stderr, "Error: read_json: Refractivity can't be applied here: %d\n", line);
+                            exit(1);
+                    }
+                    else if (strcmp(key, "ior") == 0) {
+                        if (object_type == PLAN) {
+                            objects[object_counter].plane.ior = next_number(json);
+                        }
+                        else if(object_type == SPH){
+                            objects[object_counter].sphere.ior = next_number(json);
+                        }
+                        else if (object_type == QUAD){
+                            objects[object_counter].quadric.ior = next_number(json);
+                        }
+                        else
+                            fprintf(stderr, "Error: read_json: Refractivity can't be applied here: %d\n", line);
+                            exit(1);
+                    }
                     else if (strcmp(key, "normal") == 0) {
                         if (object_type != PLAN) {
                             fprintf(stderr, "Error: read_json: Normal vector can't be applied here: %d\n", line);

@@ -8,7 +8,8 @@
 
 #include "raycast.h"
 Vector background_color = {0, 0, 0};
-
+#define SHININESS 20        // constant for shininess
+#define MAX_REC_LEVEL 7     // maximum recursion level for raytracing
 /*=====================================================================================================*/
 int get_camera(OBJECT *objects) {
     int i = 0;
@@ -115,7 +116,21 @@ double quadric_intersection(Ray *ray, double *Co,double* Position){
     
     return -1;
 }
-
+/*==================================================================================================*/
+void reflection_vector(Vector direction, Vector position, int obj_index, Vector reflection) {
+    Vector normal;
+    if (objects[obj_index].type == PLAN) {
+        Vector_copy(objects[obj_index].plane.normal, normal);
+    }
+    else if (objects[obj_index].type == SPH) {
+        Vector_sub(position, objects[obj_index].sphere.position, normal);
+    }
+    else if (objects[obj_index].type == QUAD) {
+        get_quadric_normal(normal,objects[obj_index].quadric.coefficient,objects[obj_index].quadric.position);
+    }
+    normalize(normal);
+    Vector_reflect(direction, normal, reflection);
+}
 /*==================================================================================================*/
 void get_best_solution(Ray *ray, int self_index, double max_distance, int *ret_index, double *ret_best_t) {
     int best_o = -1;
@@ -166,7 +181,7 @@ void get_intersection(double* intersection, Ray *ray, double t){
     intersection[2] = ray->origin[2] + ray->direction[2] * t;
 }
 
-void get_quadric_normal(double* normal,double *Coefficient,double *Position){
+void get_quadric_normal(Vector normal,double *Coefficient,double *Position){
 
     normal[0] =-2*Coefficient[0]*(Position[0])-Coefficient[3]*(Position[1])-Coefficient[4]*(Position[2])-Coefficient[6];
     normal[1] =-2*Coefficient[1]*(Position[1])-Coefficient[3]*(Position[0])-Coefficient[5]*(Position[2])-Coefficient[7];
@@ -176,99 +191,126 @@ void get_quadric_normal(double* normal,double *Coefficient,double *Position){
 }
 
 
-
 /*==================================================================================================*/
-void shade(Ray *ray, int object_index, double t, double color[3]) {
-
-    Vector new_origin;
-    Vector new_direction;
+void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, double max_dist, Vector color) {
+    Vector normal;
+    Vector obj_diff_color;
+    Vector obj_spec_color;
     
-
+    // find normal and color
+    if (objects[object_index].type == PLAN) {
+        Vector_copy(objects[object_index].plane.normal, normal);
+        Vector_copy(objects[object_index].plane.diff_color, obj_diff_color);
+        Vector_copy(objects[object_index].plane.spec_color, obj_spec_color);
+    } else if (objects[object_index].type == SPH) {
+        // find normal of our current intersection on the sphere
+        Vector_sub(ray->origin, objects[object_index].sphere.position, normal);
+        // copy the colors into temp variables
+        Vector_copy(objects[object_index].sphere.diff_color, obj_diff_color);
+        Vector_copy(objects[object_index].sphere.spec_color, obj_spec_color);
+    } else if (objects[object_index].type == QUAD) {
+        // find normal of our current intersection on the quadric
+        get_quadric_normal(normal,objects[object_index].quadric.coefficient, objects[object_index].quadric.position);
+        // copy the colors into temp variables
+        Vector_copy(objects[object_index].quadric.diff_color,obj_diff_color);
+        Vector_copy(objects[object_index].sphere.spec_color, obj_spec_color);
+    }
+    else {
+        fprintf(stderr, "Error: shade: Trying to shade unsupported type of object\n");
+        exit(1);
+    }
+    normalize(normal);
+    // find light, reflection and camera vectors
+    Vector L;
+    Vector R;
+    Vector V;
+    Vector_copy(ray->direction, L);
+    normalize(L);
+    Vector_reflect(L, normal, R);
+    Vector_copy(position, V);
+    Vector diffuse_color;
+    Vector specular_color;
+    Vector_zero(diffuse_color);
+    Vector_zero(specular_color);
+    get_diffuse(normal, L, light->color, obj_diff_color, diffuse_color);
+    get_specular(SHININESS, L, R, normal, V, obj_spec_color, light->color, specular_color);
+    
+    // calculate the angular and radial attenuation
+    double fang;
+    double frad;
+    // get the vector from the object to the light
+    Vector light_to_obj_dir;
+    Vector_copy(L, light_to_obj_dir);
+    Vector_scale(light_to_obj_dir, -1, light_to_obj_dir);
+    
+    fang = calculate_angular_att(light, light_to_obj_dir);
+    frad = calculate_radial_att(light, max_dist);
+    color[0] += frad * fang * (specular_color[0] + diffuse_color[0]);
+    color[1] += frad * fang * (specular_color[1] + diffuse_color[1]);
+    color[2] += frad * fang * (specular_color[2] + diffuse_color[2]);
+}
+/*==================================================================================================*/
+void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector color) {
+    if (rec_level > MAX_REC_LEVEL) {
+        color[0] = 0;
+        color[1] = 1;
+        color[2] = 2;
+    }
+    Vector new_origin,new_direction;
+    if (ray == NULL) {
+        fprintf(stderr, "Error: shade: Ray had no data\n");
+        exit(1);
+    }
     Vector_scale(ray->direction, t, new_origin);
     Vector_add(new_origin, ray->origin, new_origin);
     
-    Ray new_ray = {
+    Ray new_ray={
         .origin = {new_origin[0], new_origin[1], new_origin[2]},
         .direction = {new_direction[0], new_direction[1], new_direction[2]}
     };
     
+    Vector reflection, viewObject;
+    Vector_scale(ray->direction, -1, viewObject);
+    reflection_vector(viewObject, new_ray.origin, object_index, reflection);
+    
+    int best_object_index;
+    double best_t;
+    
+    
+    Ray ray_reflected = {
+        .origin = {new_origin[0], new_origin[1], new_origin[2]},
+        .direction = {reflection[0], reflection[1], reflection[2]}
+    };
+    
+    get_best_solution(&ray_reflected,object_index, INFINITY, &best_object_index, &best_t);
+    
+    if (best_object_index == -1) { // there were no objects that we intersected with
+        color[0] = 0;
+        color[1] = 0;
+        color[2] = 0;
+    }
+    else {  // we had an intersection, so we need to recursively shade...
+        double reflection_color[3] = {0, 0, 0};
+        recursive_shade(&ray_reflected, best_object_index, best_t, rec_level+1, reflection_color);
+        LIGHT light;
+        Vector_scale(reflection, -1, light.direction);
+        light.color[0] = reflection_color[0];
+        light.color[1] = reflection_color[1];
+        light.color[2] = reflection_color[2];
+        original_shade(ray, object_index, ray_reflected.direction, &light, INFINITY, color);
+    }
     for (int i=0; i<num_lights; i++) {
-        
         // find new ray direction
+        
         Vector_sub(lights[i].position, new_ray.origin, new_ray.direction);
         double distance_to_light = Vector_len(new_ray.direction);
         normalize(new_ray.direction);
-       
-        
-        int best_o;     // index of closest object
-        double best_t;  // distance of closest object
-        
         
         // new check new ray for intersections with other objects
-        get_best_solution(&new_ray, object_index, distance_to_light, &best_o, &best_t);
-        Vector normal,obj_diff_color,obj_spec_color;
-     
-        if (best_o == -1) { // this means there was no object in the way between the current one and the light
-            Vector_zero(normal); // zero out these vectors each time
-            Vector_zero(obj_diff_color);
-            Vector_zero(obj_spec_color);
-            
-            // find normal and color
-            if (objects[object_index].type == PLAN) {
-                Vector_copy(objects[object_index].plane.normal, normal);
-                Vector_copy(objects[object_index].plane.diff_color, obj_diff_color);
-                Vector_copy(objects[object_index].plane.spec_color, obj_spec_color);
-            } else if (objects[object_index].type == SPH) {
-                // find normal of our current intersection on the sphere
-                Vector_sub(new_ray.origin, objects[object_index].sphere.position, normal);
-          
-                Vector_copy(objects[object_index].sphere.diff_color, obj_diff_color);
-                Vector_copy(objects[object_index].sphere.spec_color, obj_spec_color);
-               
-            }else if (objects[object_index].type == QUAD) {
-                get_quadric_normal(normal,objects[object_index].quadric.coefficient, objects[object_index].quadric.position);
-                //printf("normal at here is %lf,%lf,%lf\n",normal[0],normal[1],normal[2]);
-                Vector_copy(objects[object_index].quadric.diff_color,obj_diff_color);
-                Vector_copy(objects[object_index].sphere.spec_color, obj_spec_color);
-            }
-            else {
-                fprintf(stderr, "Error: shade: Trying to shade unsupported type of object\n");
-                exit(1);
-            }
-            normalize(normal);
-            Vector L,R,V;
-
-            Vector_copy(new_ray.direction, L);
-            normalize(L);
-            Vector_reflect(L, normal, R);
-            Vector_copy(ray->direction, V);
-            Vector diffuse,specular;
- 
-            Vector_zero(diffuse);
-            Vector_zero(specular);
-
-            get_diffuse(normal, L, lights[i].color, obj_diff_color, diffuse);
-            
-            get_specular(20, L, R, normal, V, obj_spec_color, lights[i].color, specular);
-            
-            double fang,frad;
-            Vector obj_to_light_dir;
-            
-            Vector_copy(new_ray.direction, obj_to_light_dir);
-            Vector_scale(obj_to_light_dir, -1, obj_to_light_dir);
-
-
-            fang = calculate_angular_att(&lights[i], obj_to_light_dir);
-           
-            frad = calculate_radial_att(&lights[i], distance_to_light);
-            
-            
-            color[0] += frad*fang*(specular[0] + diffuse[0]);
-            color[1] += frad*fang*(specular[1] + diffuse[1]);
-            color[2] += frad*fang*(specular[2] + diffuse[2]);
-
-            //printf("%lf,%lf,%lf\n",color[0],color[1],color[2]);
-
+        get_best_solution(&new_ray, object_index, distance_to_light, &best_object_index, &best_t);
+        
+        if (best_object_index == -1) { // this means there was no object in the way between the current one and the light
+            original_shade(&new_ray, object_index, ray->direction, &lights[i], distance_to_light, color);
         }
         // there was an object in the way, so we don't do anything. It's shadow
     }
@@ -307,7 +349,7 @@ void raycast_scene(Image *img, double cam_width, double cam_height, OBJECT *obje
             
             // set ambient color
             if (best_t > 0 && best_t != INFINITY && best_o != -1) {// there was an intersection
-                shade(&ray, best_o, best_t, color);
+                recursive_shade(&ray, best_o, best_t,0,color);
                 shade_pixel(color, x, y, img);
             }
             else {
