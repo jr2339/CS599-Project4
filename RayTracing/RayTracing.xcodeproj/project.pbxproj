@@ -8,6 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		F6B886841DD1A2E100884EB2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = F6B886831DD1A2E100884EB2 /* main.c */; };
+		F6B8868C1DD1A46F00884EB2 /* vector.c in Sources */ = {isa = PBXBuildFile; fileRef = F6B8868A1DD1A46F00884EB2 /* vector.c */; };
+		F6B8868F1DD1A49A00884EB2 /* raycast.c in Sources */ = {isa = PBXBuildFile; fileRef = F6B8868D1DD1A49A00884EB2 /* raycast.c */; };
+		F6B886921DD1A4A400884EB2 /* ppm.c in Sources */ = {isa = PBXBuildFile; fileRef = F6B886901DD1A4A400884EB2 /* ppm.c */; };
+		F6B886951DD1A4B600884EB2 /* json.c in Sources */ = {isa = PBXBuildFile; fileRef = F6B886931DD1A4B600884EB2 /* json.c */; };
+		F6B886981DD1A4C900884EB2 /* illumination.c in Sources */ = {isa = PBXBuildFile; fileRef = F6B886961DD1A4C900884EB2 /* illumination.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +30,17 @@
 /* Begin PBXFileReference section */
 		F6B886801DD1A2E100884EB2 /* RayTracing */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RayTracing; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6B886831DD1A2E100884EB2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		F6B8868A1DD1A46F00884EB2 /* vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = vector.c; sourceTree = "<group>"; };
+		F6B8868B1DD1A46F00884EB2 /* vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vector.h; sourceTree = "<group>"; };
+		F6B8868D1DD1A49A00884EB2 /* raycast.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = raycast.c; sourceTree = "<group>"; };
+		F6B8868E1DD1A49A00884EB2 /* raycast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = raycast.h; sourceTree = "<group>"; };
+		F6B886901DD1A4A400884EB2 /* ppm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ppm.c; sourceTree = "<group>"; };
+		F6B886911DD1A4A400884EB2 /* ppm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ppm.h; sourceTree = "<group>"; };
+		F6B886931DD1A4B600884EB2 /* json.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = json.c; sourceTree = "<group>"; };
+		F6B886941DD1A4B600884EB2 /* json.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = json.h; sourceTree = "<group>"; };
+		F6B886961DD1A4C900884EB2 /* illumination.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = illumination.c; sourceTree = "<group>"; };
+		F6B886971DD1A4C900884EB2 /* illumination.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = illumination.h; sourceTree = "<group>"; };
+		F6B886991DD1A4DB00884EB2 /* base.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = base.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +74,17 @@
 			isa = PBXGroup;
 			children = (
 				F6B886831DD1A2E100884EB2 /* main.c */,
+				F6B8868A1DD1A46F00884EB2 /* vector.c */,
+				F6B8868B1DD1A46F00884EB2 /* vector.h */,
+				F6B8868D1DD1A49A00884EB2 /* raycast.c */,
+				F6B8868E1DD1A49A00884EB2 /* raycast.h */,
+				F6B886901DD1A4A400884EB2 /* ppm.c */,
+				F6B886911DD1A4A400884EB2 /* ppm.h */,
+				F6B886931DD1A4B600884EB2 /* json.c */,
+				F6B886941DD1A4B600884EB2 /* json.h */,
+				F6B886961DD1A4C900884EB2 /* illumination.c */,
+				F6B886971DD1A4C900884EB2 /* illumination.h */,
+				F6B886991DD1A4DB00884EB2 /* base.h */,
 			);
 			path = RayTracing;
 			sourceTree = "<group>";
@@ -119,7 +146,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F6B886951DD1A4B600884EB2 /* json.c in Sources */,
+				F6B8868C1DD1A46F00884EB2 /* vector.c in Sources */,
+				F6B886981DD1A4C900884EB2 /* illumination.c in Sources */,
+				F6B8868F1DD1A49A00884EB2 /* raycast.c in Sources */,
 				F6B886841DD1A2E100884EB2 /* main.c in Sources */,
+				F6B886921DD1A4A400884EB2 /* ppm.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
