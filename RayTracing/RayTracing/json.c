@@ -183,7 +183,7 @@ char* next_string(FILE* json) {
 // This function at here is for quadric
 double* next_coefficient(FILE* json){
     double* v = malloc(10*sizeof(double));
-
+    
     skip_ws(json);
     expect_c(json, '[');
     skip_ws(json);
@@ -345,7 +345,7 @@ void read_scene(const char* filename) {
                         }
                         lights[light_counter].theta_deg = temp;
                     }
-
+                    
                     else if (strcmp(key, "radial-a0") == 0) {
                         if (object_type != LIG) {
                             fprintf(stderr, "Error: read_json: Radial-a0 cannot be set on this type: %d\n", line);
@@ -410,38 +410,48 @@ void read_scene(const char* filename) {
                         lights[light_counter].direction = next_vector(json);
                     }
                     else if (strcmp(key, "specular_color") == 0) {
-                        if (object_type == SPH)
+                        if (object_type == SPH){
                             objects[object_counter].sphere.spec_color = next_color(json, true);
-                        else if (object_type == PLAN)
+                        }
+                        else if (object_type == PLAN){
                             objects[object_counter].plane.spec_color = next_color(json, true);
-                        else if (object_type == QUAD)
+                        }
+                        else if (object_type == QUAD){
                             objects[object_counter].quadric.spec_color = next_color(json,true);
+                        }
                         else {
                             fprintf(stderr, "Error: read_json: speculaor_color vector can't be applied here: %d\n", line);
                             exit(1);
                         }
                     }
                     else if (strcmp(key, "diffuse_color") == 0) {
-                        if (object_type == SPH)
+                        if (object_type == SPH){
                             objects[object_counter].sphere.diff_color = next_color(json, true);
-                        else if (object_type == PLAN)
+                        }
+                        else if (object_type == PLAN){
                             objects[object_counter].plane.diff_color = next_color(json, true);
-                        else if (object_type == QUAD)
+                        }
+                        else if (object_type == QUAD){
                             objects[object_counter].quadric.diff_color = next_color(json,true);
+                        }
                         else {
                             fprintf(stderr, "Error: read_json: diffuse_color vector can't be applied here: %d\n", line);
                             exit(1);
                         }
                     }
                     else if (strcmp(key, "position") == 0) {
-                        if (object_type == SPH)
+                        if (object_type == SPH){
                             objects[object_counter].sphere.position = next_vector(json);
-                        else if (object_type == PLAN)
+                        }
+                        else if (object_type == PLAN){
                             objects[object_counter].plane.position = next_vector(json);
-                        else if (object_type == LIG)
+                        }
+                        else if (object_type == LIG){
                             lights[light_counter].position = next_vector(json);
-                        else if (object_type == QUAD)
+                        }
+                        else if (object_type == QUAD){
                             objects[object_counter].quadric.position = next_vector(json);
+                        }
                         else {
                             fprintf(stderr, "Error: read_json: Position vector can't be applied here: %d\n", line);
                             exit(1);
@@ -449,35 +459,37 @@ void read_scene(const char* filename) {
                         
                     }
                     else if (strcmp(key, "reflectivity") == 0) {
-                        if (object_type == PLAN) {
-                           objects[object_counter].plane.reflect = next_number(json);
-                        }
-                        else if(object_type == SPH){
+                        if (object_type == SPH){
                             objects[object_counter].sphere.reflect = next_number(json);
                         }
-                        else if (object_type == QUAD){
-                            objects[object_counter].quadric.reflect = next_number(json);
+                        else if(object_type == SPH){
+                            objects[object_counter].plane.reflect = next_number(json);
                         }
-                        else
+                        else if (object_type == QUAD){
+                         objects[object_counter].quadric.reflect = next_number(json);
+                        }
+                        else{
                             fprintf(stderr, "Error: read_json: Reflectivity can't be applied here: %d\n", line);
                             exit(1);
+                        }
                     }
                     else if (strcmp(key, "refractivity") == 0) {
-                        if (object_type == PLAN) {
-                            objects[object_counter].plane.refract = next_number(json);
-                        }
-                        else if(object_type == SPH){
+                        if (object_type == SPH){
                             objects[object_counter].sphere.refract = next_number(json);
+                        }
+                        else if(object_type == PLAN){
+                            objects[object_counter].plane.refract = next_number(json);
                         }
                         else if (object_type == QUAD){
                             objects[object_counter].quadric.refract = next_number(json);
                         }
-                        else
+                        else{
                             fprintf(stderr, "Error: read_json: Refractivity can't be applied here: %d\n", line);
                             exit(1);
+                        }
                     }
                     else if (strcmp(key, "ior") == 0) {
-                        if (object_type == PLAN) {
+                        if (object_type == PLAN){
                             objects[object_counter].plane.ior = next_number(json);
                         }
                         else if(object_type == SPH){
@@ -486,9 +498,10 @@ void read_scene(const char* filename) {
                         else if (object_type == QUAD){
                             objects[object_counter].quadric.ior = next_number(json);
                         }
-                        else
-                            fprintf(stderr, "Error: read_json: Refractivity can't be applied here: %d\n", line);
+                        else{
+                            fprintf(stderr, "Error: read_json: ior can't be applied here: %d\n", line);
                             exit(1);
+                        }
                     }
                     else if (strcmp(key, "normal") == 0) {
                         if (object_type != PLAN) {
@@ -534,7 +547,7 @@ void read_scene(const char* filename) {
             }
         }
         if (object_type == LIG){
-             light_counter++;
+            light_counter++;
         }
         
         else{
@@ -591,6 +604,3 @@ void get_objects(OBJECT *object) {
     }
     printf("end at i=%d\n", i);
 }
-
-
-

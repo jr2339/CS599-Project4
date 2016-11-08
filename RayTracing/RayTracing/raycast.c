@@ -7,9 +7,11 @@
 //
 
 #include "raycast.h"
-Vector background_color = {0, 0, 0};
 #define SHININESS 20        // constant for shininess
-#define MAX_REC_LEVEL 7     // maximum recursion level for raytracing
+#define MAX_REC_LEVEL 7     // how many times we used the recursion shade in our project
+//Overall background color of our image
+
+Vector background_color = {0, 0, 0};
 /*=====================================================================================================*/
 int get_camera(OBJECT *objects) {
     int i = 0;
@@ -22,7 +24,6 @@ int get_camera(OBJECT *objects) {
     // no camera found in data
     return -1;
 }
-
 
 /*==================================================================================================*/
 
@@ -57,10 +58,7 @@ double plane_intersection(Ray *ray, double *Pos, double *Norm){
     if (t<0.0) { // reflection, no intersection
         return -1;
     }
-    
-    //printf("plane_intersection finished works\n");
     return t; // return something, but not t , need to figure out it
-    
     
 }
 
@@ -90,7 +88,6 @@ double sphere_intersection(Ray *ray, double *C, double r) {
     return t;
 }
 /*==================================================================================================*/
-
 double quadric_intersection(Ray *ray, double *Co,double* Position){
     double a,b,c;
     
@@ -117,16 +114,16 @@ double quadric_intersection(Ray *ray, double *Co,double* Position){
     return -1;
 }
 /*==================================================================================================*/
-void reflection_vector(Vector direction, Vector position, int obj_index, Vector reflection) {
+void reflection_vector(Vector direction, Vector position, int object_index, Vector reflection) {
     Vector normal;
-    if (objects[obj_index].type == PLAN) {
-        Vector_copy(objects[obj_index].plane.normal, normal);
+    if (objects[object_index].type == PLAN) {
+        Vector_copy(objects[object_index].plane.normal, normal);
     }
-    else if (objects[obj_index].type == SPH) {
-        Vector_sub(position, objects[obj_index].sphere.position, normal);
+    else if (objects[object_index].type == SPH) {
+        Vector_sub(position, objects[object_index].sphere.position, normal);
     }
-    else if (objects[obj_index].type == QUAD) {
-        get_quadric_normal(normal,objects[obj_index].quadric.coefficient,objects[obj_index].quadric.position);
+    else if (objects[object_index].type == QUAD) {
+        get_quadric_normal(normal,objects[object_index].quadric.coefficient,objects[object_index].quadric.position);
     }
     normalize(normal);
     Vector_reflect(direction, normal, reflection);
@@ -160,7 +157,7 @@ void get_best_solution(Ray *ray, int self_index, double max_distance, int *ret_i
                 t = quadric_intersection(ray, objects[i].quadric.coefficient,objects[i].quadric.position);
                 break;
             default:
-                // Error
+                printf("No intersection\n");
                 exit(1);
         }
         if (max_distance != INFINITY && t > max_distance)
@@ -174,7 +171,6 @@ void get_best_solution(Ray *ray, int self_index, double max_distance, int *ret_i
     (*ret_best_t) = best_t;
 }
 /*==================================================================================================*/
-
 void get_intersection(double* intersection, Ray *ray, double t){
     intersection[0] = ray->origin[0] + ray->direction[0] * t;
     intersection[1] = ray->origin[1] + ray->direction[1] * t;
@@ -189,7 +185,6 @@ void get_quadric_normal(Vector normal,double *Coefficient,double *Position){
     normalize(normal);
     
 }
-
 
 /*==================================================================================================*/
 void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, double max_dist, Vector color) {
@@ -255,6 +250,7 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         color[0] = 0;
         color[1] = 1;
         color[2] = 2;
+        return;
     }
     Vector new_origin,new_direction;
     if (ray == NULL) {
@@ -269,7 +265,8 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         .direction = {new_direction[0], new_direction[1], new_direction[2]}
     };
     
-    Vector reflection, viewObject;
+    Vector reflection;
+    Vector viewObject;
     Vector_scale(ray->direction, -1, viewObject);
     reflection_vector(viewObject, new_ray.origin, object_index, reflection);
     
@@ -290,7 +287,7 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         color[2] = 0;
     }
     else {  // we had an intersection, so we need to recursively shade...
-        double reflection_color[3] = {0, 0, 0};
+        Vector reflection_color;
         recursive_shade(&ray_reflected, best_object_index, best_t, rec_level+1, reflection_color);
         LIGHT light;
         Vector_scale(reflection, -1, light.direction);
