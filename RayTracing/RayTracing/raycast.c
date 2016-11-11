@@ -252,7 +252,8 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         color[2] = 2;
         return;
     }
-    Vector new_origin,new_direction;
+    Vector new_origin = {0,0,0};
+    Vector new_direction ={0,0,0};
     if (ray == NULL) {
         fprintf(stderr, "Error: shade: Ray had no data\n");
         exit(1);
@@ -265,8 +266,8 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         .direction = {new_direction[0], new_direction[1], new_direction[2]}
     };
     
-    Vector reflection;
-    Vector viewObject;
+    Vector reflection ={0,0,0};
+    Vector viewObject ={0,0,0};
     Vector_scale(ray->direction, -1, viewObject);
     reflection_vector(viewObject, new_ray.origin, object_index, reflection);
     
@@ -282,19 +283,27 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
     get_best_solution(&ray_reflected,object_index, INFINITY, &best_object_index, &best_t);
     
     if (best_object_index == -1) { // there were no objects that we intersected with
+        
         color[0] = 0;
-        color[1] = 0;
-        color[2] = 0;
+        //color[1] = 0;
+        //color[2] = 0;
+        
     }
     else {  // we had an intersection, so we need to recursively shade...
-        Vector reflection_color;
+        Vector reflection_color ={0,0,0};
         recursive_shade(&ray_reflected, best_object_index, best_t, rec_level+1, reflection_color);
         LIGHT light;
+        light.direction = malloc(sizeof(Vector));
+        light.color = malloc(sizeof(Vector));
+        
         Vector_scale(reflection, -1, light.direction);
         light.color[0] = reflection_color[0];
         light.color[1] = reflection_color[1];
         light.color[2] = reflection_color[2];
         original_shade(ray, object_index, ray_reflected.direction, &light, INFINITY, color);
+        
+        free(light.direction);
+        free(light.color);
     }
     for (int i=0; i<num_lights; i++) {
         // find new ray direction
