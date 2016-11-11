@@ -266,7 +266,6 @@ void read_scene(const char* filename) {
                 objects[object_counter].type = PLAN;
             }
             else if (strcmp(type, "quadric") == 0) {
-                //printf("============================= This Object is quadric =============================\n");
                 object_type = QUAD;
                 objects[object_counter].type = QUAD;
             }
@@ -524,7 +523,6 @@ void read_scene(const char* filename) {
                         exit(1);
                     }
                     
-                    // do something with key and value
                     skip_ws(json);
                 }
                 else {
