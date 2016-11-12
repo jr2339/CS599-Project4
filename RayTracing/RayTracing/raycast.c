@@ -114,19 +114,19 @@ double quadric_intersection(Ray *ray, double *Co,double* Position){
     return -1;
 }
 /*==================================================================================================*/
-void reflection_vector(Vector direction, Vector position, int object_index, Vector reflection) {
-    Vector normal;
-    if (objects[object_index].type == PLAN) {
-        Vector_copy(objects[object_index].plane.normal, normal);
-    }
-    else if (objects[object_index].type == SPH) {
-        Vector_sub(position, objects[object_index].sphere.position, normal);
-    }
-    else if (objects[object_index].type == QUAD) {
-        get_quadric_normal(normal,objects[object_index].quadric.coefficient,objects[object_index].quadric.position);
-    }
+void get_intersection(double* intersection, Ray *ray, double t){
+    intersection[0] = ray->origin[0] + ray->direction[0] * t;
+    intersection[1] = ray->origin[1] + ray->direction[1] * t;
+    intersection[2] = ray->origin[2] + ray->direction[2] * t;
+}
+
+void get_quadric_normal(Vector normal,double *Coefficient,double *Position){
+    
+    normal[0] =-2*Coefficient[0]*(Position[0])-Coefficient[3]*(Position[1])-Coefficient[4]*(Position[2])-Coefficient[6];
+    normal[1] =-2*Coefficient[1]*(Position[1])-Coefficient[3]*(Position[0])-Coefficient[5]*(Position[2])-Coefficient[7];
+    normal[2] =-2*Coefficient[2] * (Position[2])-Coefficient[4]*(Position[0])- Coefficient[5] * (Position[1])-Coefficient[8];
     normalize(normal);
-    Vector_reflect(direction, normal, reflection);
+    
 }
 /*==================================================================================================*/
 void get_best_solution(Ray *ray, int self_index, double max_distance, int *ret_index, double *ret_best_t) {
@@ -147,15 +147,15 @@ void get_best_solution(Ray *ray, int self_index, double max_distance, int *ret_i
                 break;
             case SPH:
                 t = sphere_intersection(ray, objects[i].sphere.position,
-                                     objects[i].sphere.radius);
+                                        objects[i].sphere.radius);
                 break;
             case PLAN:
                 t = plane_intersection(ray, objects[i].plane.position,
-                                    objects[i].plane.normal);
+                                       objects[i].plane.normal);
                 break;
             case QUAD:
                 t = quadric_intersection(ray, objects[i].quadric.coefficient,
-                                    objects[i].quadric.position);
+                                         objects[i].quadric.position);
                 break;
             default:
                 printf("No intersection\n");
@@ -171,22 +171,99 @@ void get_best_solution(Ray *ray, int self_index, double max_distance, int *ret_i
     (*ret_index) = best_o;
     (*ret_best_t) = best_t;
 }
+
 /*==================================================================================================*/
-void get_intersection(double* intersection, Ray *ray, double t){
-    intersection[0] = ray->origin[0] + ray->direction[0] * t;
-    intersection[1] = ray->origin[1] + ray->direction[1] * t;
-    intersection[2] = ray->origin[2] + ray->direction[2] * t;
+void get_normal(int object_index, Vector position, Vector normal){
+    if (objects[object_index].type == PLAN) {
+        Vector_copy(objects[object_index].plane.normal, normal);
+    }
+    else if (objects[object_index].type == SPH) {
+        Vector_sub(position, objects[object_index].sphere.position, normal);
+    }
+    else if (objects[object_index].type == QUAD) {
+        get_quadric_normal(normal,objects[object_index].quadric.coefficient,objects[object_index].quadric.position);
+    }else {
+        fprintf(stderr, "Error: normal_vector: Can't get normal vector for this project\n");
+        }
 }
-
-void get_quadric_normal(Vector normal,double *Coefficient,double *Position){
-
-    normal[0] =-2*Coefficient[0]*(Position[0])-Coefficient[3]*(Position[1])-Coefficient[4]*(Position[2])-Coefficient[6];
-    normal[1] =-2*Coefficient[1]*(Position[1])-Coefficient[3]*(Position[0])-Coefficient[5]*(Position[2])-Coefficient[7];
-    normal[2] =-2*Coefficient[2] * (Position[2])-Coefficient[4]*(Position[0])- Coefficient[5] * (Position[1])-Coefficient[8];
+/*==================================================================================================*/
+double get_reflectivity(int object_index){
+    if (objects[object_index].type == PLAN) {
+        return objects[object_index].plane.reflect;
+    }
+    else if (objects[object_index].type == SPH) {
+        return objects[object_index].sphere.reflect;
+    }
+    else if (objects[object_index].type == QUAD){
+        return objects[object_index].quadric.reflect;
+    }
+    else {
+        fprintf(stderr, "Error: get_reflectivity: Can't find reflect property for this project\n");
+        return -1;
+    }
+}
+/*==================================================================================================*/
+double get_refractivity(int obj_index) {
+    if (objects[obj_index].type == PLAN) {
+        return objects[obj_index].plane.refract;
+    }
+    else if (objects[obj_index].type == SPH) {
+        return objects[obj_index].sphere.refract;
+    }
+    else if (objects[obj_index].type == QUAD) {
+        return objects[obj_index].quadric.refract;
+    }
+    else {
+        fprintf(stderr, "Error: get_reflectivity: Specified object does not have a reflect property\n");
+        return -1;
+    }
+}
+/*==================================================================================================*/
+void reflection_vector(Vector direction, Vector position, int object_index, Vector reflection) {
+    Vector normal;
+    get_normal(object_index, position, normal);
     normalize(normal);
-    
+    Vector_reflect(direction, normal, reflection);
 }
-
+/*==================================================================================================*/
+void refraction_vector(Vector direction, Vector position, int object_index, double out_ior, Vector refracted_vector) {
+    // initializations and variables setup
+    normalize(direction);
+    normalize(position);
+    double in_ior;
+    if (objects[object_index].type == PLAN){
+        in_ior = objects[object_index].plane.ior;
+    }
+    else if (objects[object_index].type == SPH){
+        in_ior = objects[object_index].sphere.ior;
+    }
+    else if (objects[object_index].type == QUAD){
+        in_ior = objects[object_index].quadric.ior;
+    }
+    else {
+        fprintf(stderr, "Error: refraction_vector: object of type %d does not have ior field\n", objects[object_index].type);
+        exit(1);
+    }
+    Vector normal, a, b;
+    
+    // find normal vector of current object
+    get_normal(object_index, position, normal);
+    //normalize(normal);
+    
+    // create coordinate frame with a and b, where b is tangent to the object intersection
+    Vector_corss(normal, direction, a);
+    
+    normalize(a);
+    Vector_corss(a, normal, b);
+    
+    // find transmission vector angle and direction
+    double sin_theta = Vector_dot(direction, b);
+    double sin_phi = (out_ior / in_ior) * sin_theta;
+    double cos_phi = sqrt(1 - sqr(sin_phi));
+    Vector_scale(normal, -1*cos_phi, normal);
+    Vector_scale(b, sin_phi, b);
+    Vector_add(normal , b, refracted_vector);
+}
 /*==================================================================================================*/
 /*This is almost same code from project3 which is shade in project3 */
 void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, double max_dist, Vector color) {
@@ -227,8 +304,7 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
     Vector_copy(position, V);
     Vector diffuse_color;
     Vector specular_color;
-    Vector_zero(diffuse_color);
-    Vector_zero(specular_color);
+    
     get_diffuse(normal, L, light->color, object_diff_color, diffuse_color);
     get_specular(SHININESS, L, R, normal, V, object_spec_color, light->color, specular_color);
     
@@ -253,6 +329,7 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
 /*==================================================================================================*/
 void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector color) {
     if (rec_level > MAX_REC_LEVEL) {
+        // return black color
         color[0] = 0;
         color[1] = 0;
         color[2] = 0;
@@ -260,6 +337,7 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
     }
     Vector new_origin = {0,0,0};
     Vector new_direction ={0,0,0};
+    
     if (ray == NULL) {
         fprintf(stderr, "Error: shade: Ray had is Empty\n");
         exit(1);
@@ -273,10 +351,8 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
     };
     
     Vector reflection ={0,0,0};
-    Vector viewObject ={0,0,0};
-    Vector_scale(ray->direction, -1, viewObject);
-    normalize(viewObject);
-    reflection_vector(viewObject, new_ray.origin, object_index, reflection);
+    normalize(ray->direction);
+    reflection_vector(ray->direction, new_ray.origin, object_index, reflection);
     
     int best_object_index;
     double best_t;
@@ -299,7 +375,11 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
     else {
         // we have an intersection, so we use recursively shade...
         Vector reflection_color ={0,0,0};
+        double reflect_coefficient = get_reflectivity(object_index);
+        
         recursive_shade(&ray_reflected, best_object_index, best_t, rec_level+1, reflection_color);
+        Vector_scale(reflection_color, reflect_coefficient, reflection_color);
+        
         LIGHT light;
         light.type = REFLECTION;
         //at very begining, forget to malloc for light direction and color
@@ -313,9 +393,11 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         light.color[2] = reflection_color[2];
         
         Vector_scale(ray_reflected.direction, best_t, ray_reflected.direction);
-        Vector_add(ray_reflected.direction, new_ray.origin, new_ray.direction);
+        Vector_sub(ray_reflected.direction, new_ray.origin, new_ray.direction);
         normalize(new_ray.direction);
-        original_shade(ray, object_index, ray_reflected.direction, &light, INFINITY, color);
+        
+ 
+        original_shade(&new_ray, object_index, ray->direction, &light, INFINITY, color);
         
         free(light.direction);
         free(light.color);
@@ -361,9 +443,10 @@ void raycast_scene(Image *img, double cam_width, double cam_height, OBJECT *obje
             point[1] = -(vp_pos[1] - cam_height/2.0 + pixheight*(x + 0.5));
             point[2] = vp_pos[2];    // set intersecting point Z to viewplane Z
             normalize(point);   // normalize the point
+            
             // store normalized point as our ray direction
             Vector_copy(point, ray.direction);
-            Vector color = {0.0, 0.0, 0.0};
+            Vector color = {0, 0, 0};
             
             int best_o;     // index of 'best' or closest object
             double best_t;  // closest distance

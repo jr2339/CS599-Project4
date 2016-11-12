@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RayTracing/raycast.c"
-            timestampString = "500333978.365615"
+            timestampString = "500682283.895309"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "191"
-            endingLineNumber = "191">
+            startingLineNumber = "268"
+            endingLineNumber = "268">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

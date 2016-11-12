@@ -34,4 +34,8 @@ void raycast_scene(Image *image, double cam_width, double cam_height, OBJECT *ob
 void get_quadric_normal(double* normal,double *Coefficient,double *Position);
 void reflection_vector(Vector direction, Vector position, int obj_index, Vector reflection);
 void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, double max_dist, Vector color);
+void get_normal(int object_index, Vector position, Vector normal);
+double get_reflectivity(int object_index);
+double get_refractivity(int obj_index);
+void refraction_vector(Vector direction, Vector position, int object_index, double out_ior, Vector refracted_vector);
 #endif /* raycast_h */

@@ -461,7 +461,7 @@ void read_scene(const char* filename) {
                         if (object_type == SPH){
                             objects[object_counter].sphere.reflect = next_number(json);
                         }
-                        else if(object_type == SPH){
+                        else if(object_type == PLAN){
                             objects[object_counter].plane.reflect = next_number(json);
                         }
                         else if (object_type == QUAD){
