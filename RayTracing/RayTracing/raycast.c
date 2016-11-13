@@ -220,6 +220,27 @@ double get_refractivity(int object_index) {
     }
 }
 /*==================================================================================================*/
+double get_ior(int object_index){
+    double ior;
+    if (objects[object_index].type == PLAN) {
+        ior = objects[object_index].plane.ior;
+    }
+    else if (objects[object_index].type == SPH) {
+        ior = objects[object_index].sphere.ior;
+    }
+    else if(objects[object_index].type == QUAD){
+        ior = objects[object_index].quadric.ior;
+    }
+    else {
+        fprintf(stderr, "Error: get_ior: Specified object does not have an ior property\n");
+        exit(1);
+    }
+    if (fabs(ior) < 0.0001)
+        return 1;
+    else
+        return ior;
+}
+/*==================================================================================================*/
 void reflection_vector(Vector direction, Vector position, int object_index, Vector reflection) {
     Vector normal;
     get_normal(object_index, position, normal);
@@ -231,28 +252,22 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     // initializations and variables setup
     normalize(direction);
     normalize(position);
-    double in_ior;
-    if (objects[object_index].type == PLAN){
-        in_ior = objects[object_index].plane.ior;
+    
+    double in_ior = get_ior(object_index);
+    
+    if (in_ior == out_ior) {
+        in_ior =1;
     }
-    else if (objects[object_index].type == SPH){
-        in_ior = objects[object_index].sphere.ior;
-    }
-    else if (objects[object_index].type == QUAD){
-        in_ior = objects[object_index].quadric.ior;
-    }
-    else {
-        fprintf(stderr, "Error: refraction_vector: object of type %d does not have ior field\n", objects[object_index].type);
-        exit(1);
-    }
+    
+    
     Vector normal, a, b;
     
     // find normal vector of current object
     get_normal(object_index, position, normal);
+    normalize(normal);
     
     // create coordinate frame with a and b, where b is tangent to the object intersection
     Vector_corss(normal, direction, a);
-    
     normalize(a);
     Vector_corss(a, normal, b);
     
@@ -316,7 +331,7 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
     Vector light_to_object_dir;
     Vector_copy(L, light_to_object_dir);
     Vector_scale(light_to_object_dir, -1, light_to_object_dir);
-    if (light->type == REFLECTION) {
+    if (light->type == TRACING) {
         fang = 1;
         frad = 1;
     }else{
@@ -328,7 +343,7 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
     color[2] += frad * fang * (specular_color[2] + diffuse_color[2]);
 }
 /*==================================================================================================*/
-void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector color) {
+void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int rec_level, Vector color) {
     if (rec_level > MAX_REC_LEVEL) {
         // return black color
         color[0] = 0;
@@ -352,11 +367,17 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
     };
     
     Vector reflection ={0,0,0};
+    Vector refraction ={0,0,0};
     normalize(ray->direction);
     reflection_vector(ray->direction, new_ray.origin, object_index, reflection);
+    refraction_vector(ray->direction, new_ray.origin, object_index, current_ior , refraction);
     
-    int best_object_index;
-    double best_t;
+    
+    // create temp variables to use for recursively shading
+    int best_reflection_object_index;     // index of closest reflected object
+    double best_reflection_t;  // distance of closest reflected object
+    int best_refraction_object_index;     // index of closest refracted object
+    double best_refraction_t;  // distance of closest refracted object
     
     
     Ray ray_reflected = {
@@ -364,11 +385,23 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         .direction = {reflection[0], reflection[1], reflection[2]}
     };
     
-    normalize(ray_reflected.direction);
-    get_best_solution(&ray_reflected,object_index, INFINITY, &best_object_index, &best_t);
+    Ray ray_refracted = {
+        .origin = {new_origin[0], new_origin[1], new_origin[2]},
+        .direction = {refraction[0], refraction[1], refraction[2]}
+    };
     
-    if (best_object_index == -1) {
-        // No intersection
+    normalize(ray_reflected.direction);
+    normalize(ray_refracted.direction);
+    get_best_solution(&ray_reflected,object_index, INFINITY, &best_reflection_object_index, &best_reflection_t);
+    //get_best_solution(&ray_refracted,-1, INFINITY, &best_refraction_object_index, &best_refraction_t);
+    
+    if (objects[object_index].type == PLAN){
+        get_best_solution(&ray_refracted, object_index, INFINITY, &best_refraction_object_index, &best_refraction_t);
+    }
+    else{
+        get_best_solution(&ray_refracted, -1, INFINITY, &best_refraction_object_index, &best_refraction_t);
+    }
+    if (best_reflection_object_index == -1 && best_refraction_object_index == -1) {
         color[0] = 0;
         color[1] = 0;
         color[2] = 0;
@@ -377,48 +410,91 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
     else {
         // we have an intersection, so we use recursively shade...
         Vector reflection_color ={0,0,0};
+        Vector refraction_color ={0,0,0};
         double reflect_coefficient = get_reflectivity(object_index);
+        double refract_coefficient = get_refractivity(object_index);
+        double reflect_ior =1;
+        double refract_ior =1;
         
-        recursive_shade(&ray_reflected, best_object_index, best_t, rec_level+1, reflection_color);
-        Vector_scale(reflection_color, reflect_coefficient, reflection_color);
         
-        LIGHT light;
-        light.type = REFLECTION;
+        LIGHT reflection_light;
+        reflection_light.type = TRACING;
         //at very begining, forget to malloc for light direction and color
-        light.direction = malloc(sizeof(Vector));
-        light.color = malloc(sizeof(Vector));
+        reflection_light.direction = malloc(sizeof(Vector));
+        reflection_light.color = malloc(sizeof(Vector));
         
-        Vector_scale(reflection, -1, light.direction);
-        //init light clolor
-        light.color[0] = reflection_color[0];
-        light.color[1] = reflection_color[1];
-        light.color[2] = reflection_color[2];
+        LIGHT refraction_light;
+        refraction_light.type = TRACING;
+        //at very begining, forget to malloc for light direction and color
+        refraction_light.direction = malloc(sizeof(Vector));
+        refraction_light.color = malloc(sizeof(Vector));
         
-        Vector_scale(ray_reflected.direction, best_t, ray_reflected.direction);
-        Vector_sub(ray_reflected.direction, new_ray.origin, new_ray.direction);
-        normalize(new_ray.direction);
-        
- 
-        original_shade(&new_ray, object_index, ray->direction, &light, INFINITY, color);
-        
-        free(light.direction);
-        free(light.color);
+        if (best_reflection_object_index >= 0) {
+            reflect_ior = get_ior(best_reflection_object_index);
+            recursive_shade(&ray_reflected, best_reflection_object_index, best_reflection_t, reflect_ior, rec_level+1, reflection_color);
+            Vector_scale(reflection_color, reflect_coefficient, reflection_color);
+            Vector_scale(reflection, -1, reflection_light.direction);
+            Vector_copy(reflection_color, reflection_light.color);
+            
+            Vector_scale(ray_reflected.direction, best_reflection_t, ray_reflected.direction);
+            Vector_sub(ray_reflected.direction, new_ray.origin, new_ray.direction);
+            normalize(new_ray.direction);
+            original_shade(&new_ray, object_index, ray->direction, &reflection_light, INFINITY, color);
+        }
+        if (best_refraction_object_index >= 0) {
+            refract_ior = get_ior(best_refraction_object_index);
+            Vector_scale(ray_refracted.direction, 0.01, ray_refracted.direction);
+            recursive_shade(&ray_refracted, best_refraction_object_index, best_refraction_t, refract_ior, rec_level+1, refraction_color);
+            Vector_scale(refraction_color, refract_coefficient, refraction_color);
+            Vector_scale(refraction, -1, refraction_light.direction);
+            Vector_copy(refraction_color, refraction_light.color);
+            
+            Vector_scale(ray_refracted.direction, best_refraction_t, ray_refracted.direction);
+            Vector_sub(ray_refracted.direction, new_ray.origin, new_ray.direction);
+            normalize(new_ray.direction);
+            original_shade(&new_ray, object_index, ray->direction, &refraction_light, INFINITY, color);
+        }
+        if (reflect_coefficient == -1) {
+            reflect_coefficient = 0;
+        }
+        if (refract_coefficient == -1) {
+            refract_coefficient = 0;
+        }
+        if (fabs(reflect_coefficient) < 0.00001 || fabs(refract_coefficient) < 0.00001) {
+            Vector_copy(background_color, color);
+        }else{
+            double color_coefficient = 1.0 - reflect_coefficient - refract_coefficient;
+            if (fabs(color_coefficient) < 0.0001) // account for numbers that are really close to 0, but still negative
+                color_coefficient = 0;
+            Vector object_color = {0, 0, 0};
+            Vector_copy(objects[object_index].plane.diff_color, object_color);
+            Vector_scale(object_color, color_coefficient, object_color);
+            color[0] += object_color[0];
+            color[1] += object_color[1];
+            color[2] += object_color[2];
+        }
+        //cleanup
+        free(reflection_light.direction);
+        free(reflection_light.color);
+        free(refraction_light.direction);
+        free(refraction_light.color);
     }
     for (int i=0; i<num_lights; i++) {
         // find new ray direction
+        int best_o;
+        double best_t;
         Vector_zero(new_ray.direction);
         Vector_sub(lights[i].position, new_ray.origin, new_ray.direction);
         double distance_to_light = Vector_len(new_ray.direction);
         normalize(new_ray.direction);
         
         // new check new ray for intersections with other objects
-        get_best_solution(&new_ray, object_index, distance_to_light, &best_object_index, &best_t);
+        get_best_solution(&new_ray, object_index, distance_to_light, &best_o, &best_t);
         
-        if (best_object_index == -1) { // this means there was no object in the way between the current one and the light
+        if (best_o == -1) { // this means there was no object in the way between the current one and the light
             original_shade(&new_ray, object_index, ray->direction, &lights[i], distance_to_light, color);
         }
-        //else
-        //shadow
+        // there was an object in the way, so we don't do anything. It's shadow
     }
 }
 /*==================================================================================================*/
@@ -433,7 +509,7 @@ void raycast_scene(Image *img, double cam_width, double cam_height, OBJECT *obje
     double pixwidth = (double)cam_width / (double)img->width;
     
     Ray ray = {
-        .origin = {0, 0, 8},
+        .origin = {0, 0, 0},
         .direction = {0, 0, 0}
     };
     
@@ -456,7 +532,7 @@ void raycast_scene(Image *img, double cam_width, double cam_height, OBJECT *obje
             
             // set ambient color
             if (best_t > 0 && best_t != INFINITY && best_o != -1) {// there was an intersection
-                recursive_shade(&ray, best_o, best_t,0,color);
+                recursive_shade(&ray, best_o, best_t,1,0,color);
                 shade_pixel(color, x, y, img);
             }
             else {

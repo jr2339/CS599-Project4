@@ -25,7 +25,7 @@
 #define QUAD 4
 #define LIG 5
 #define SPOTLIG 6
-#define REFLECTION 7
+#define TRACING 7
 
 /*Each Structure is a type of Objects in Jason File*/
 typedef struct CAMERA {
