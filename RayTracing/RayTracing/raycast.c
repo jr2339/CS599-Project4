@@ -250,8 +250,11 @@ void reflection_vector(Vector direction, Vector position, int object_index, Vect
 /*==================================================================================================*/
 void refraction_vector(Vector direction, Vector position, int object_index, double out_ior, Vector refracted_vector) {
     // initializations and variables setup
-    normalize(direction);
-    normalize(position);
+    Vector dir, pos;
+    Vector_copy(direction, dir);
+    Vector_copy(position, pos);
+    normalize(dir);
+    normalize(pos);
     
     double in_ior = get_ior(object_index);
     
@@ -263,20 +266,20 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     Vector normal, a, b;
     
     // find normal vector of current object
-    get_normal(object_index, position, normal);
+    get_normal(object_index, pos, normal);
     normalize(normal);
     
     // create coordinate frame with a and b, where b is tangent to the object intersection
-    Vector_corss(normal, direction, a);
+    Vector_corss(normal, dir, a);
     normalize(a);
     Vector_corss(a, normal, b);
     
     // find transmission vector angle and direction
-    double sin_theta = Vector_dot(direction, b);
+    double sin_theta = Vector_dot(dir, b);
     double sin_phi = (out_ior / in_ior) * sin_theta;
     double cos_phi = sqrt(1 - sqr(sin_phi));
     
-    Vector_scale(normal, -cos_phi, normal);
+    Vector_scale(normal, -1*cos_phi, normal);
     Vector_scale(b, sin_phi, b);
     Vector_add(normal , b, refracted_vector);
 }
@@ -319,7 +322,9 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
     Vector_reflect(L, normal, R);
     Vector_copy(position, V);
     Vector diffuse_color;
+    Vector_scale(diffuse_color, 0, diffuse_color);
     Vector specular_color;
+    Vector_scale(specular_color, 0, specular_color);
     
     get_diffuse(normal, L, light->color, object_diff_color, diffuse_color);
     get_specular(SHININESS, L, R, normal, V, object_spec_color, light->color, specular_color);
@@ -346,18 +351,21 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
 void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int rec_level, Vector color) {
     if (rec_level > MAX_REC_LEVEL) {
         // return black color
-        color[0] = 0;
-        color[1] = 0;
-        color[2] = 0;
+        Vector_scale(color, 0, color);
         return;
     }
-    Vector new_origin = {0,0,0};
-    Vector new_direction ={0,0,0};
-    
+
+    if (object_index == -1) {  // base case, no intersecting object had been found, so return black
+        //scale_color(color, 0, color);
+        return;
+    }
     if (ray == NULL) {
         fprintf(stderr, "Error: shade: Ray had is Empty\n");
         exit(1);
     }
+    Vector new_origin = {0,0,0};
+    Vector new_direction ={0,0,0};
+    
     Vector_scale(ray->direction, t, new_origin);
     Vector_add(new_origin, ray->origin, new_origin);
     
@@ -402,9 +410,7 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
         get_best_solution(&ray_refracted, -1, INFINITY, &best_refraction_object_index, &best_refraction_t);
     }
     if (best_reflection_object_index == -1 && best_refraction_object_index == -1) {
-        color[0] = 0;
-        color[1] = 0;
-        color[2] = 0;
+        Vector_scale(color, 0, color);
         
     }
     else {
@@ -460,7 +466,7 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
         if (refract_coefficient == -1) {
             refract_coefficient = 0;
         }
-        if (fabs(reflect_coefficient) < 0.00001 || fabs(refract_coefficient) < 0.00001) {
+        if (fabs(reflect_coefficient) < 0.00001 && fabs(refract_coefficient) < 0.00001) {
             Vector_copy(background_color, color);
         }else{
             double color_coefficient = 1.0 - reflect_coefficient - refract_coefficient;
