@@ -7,12 +7,14 @@
 //
 
 #include "raycast.h"
-#define SHININESS 20        // constant for shininess
+#define SHININESS 20        // constant for shininess, which is n in our forluma
 #define MAX_REC_LEVEL 7     // how many times we used the recursion shade in our project
-//Overall background color of our image
 
+//Overall background color of our image, which is black at here
 Vector background_color = {0, 0, 0};
+
 /*=====================================================================================================*/
+//Try to find camera in our jason file
 int get_camera(OBJECT *objects) {
     int i = 0;
     while (i < MAX_OBJECTS && objects[i].type != 0) {
@@ -26,9 +28,8 @@ int get_camera(OBJECT *objects) {
 }
 
 /*==================================================================================================*/
-
+//When we use formula to find color for each pixel the we shade the image
 void shade_pixel(double *color, int row, int col,Image *image){
-    //printf("shade_pixel starting works\n");
     image->data[row * image->width*4 + col*4] = (u_char)(MAX_COLOR_VAL * check_value(color[0]));
     image->data[row * image->width*4 + col*4+1] = (u_char)(MAX_COLOR_VAL* check_value(color[1]));
     image->data[row * image->width*4 + col*4+2]= (u_char)(MAX_COLOR_VAL* check_value(color[2]));
@@ -203,15 +204,15 @@ double get_reflectivity(int object_index){
     }
 }
 /*==================================================================================================*/
-double get_refractivity(int obj_index) {
-    if (objects[obj_index].type == PLAN) {
-        return objects[obj_index].plane.refract;
+double get_refractivity(int object_index) {
+    if (objects[object_index].type == PLAN) {
+        return objects[object_index].plane.refract;
     }
-    else if (objects[obj_index].type == SPH) {
-        return objects[obj_index].sphere.refract;
+    else if (objects[object_index].type == SPH) {
+        return objects[object_index].sphere.refract;
     }
-    else if (objects[obj_index].type == QUAD) {
-        return objects[obj_index].quadric.refract;
+    else if (objects[object_index].type == QUAD) {
+        return objects[object_index].quadric.refract;
     }
     else {
         fprintf(stderr, "Error: get_reflectivity: Specified object does not have a reflect property\n");
@@ -248,7 +249,6 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     
     // find normal vector of current object
     get_normal(object_index, position, normal);
-    //normalize(normal);
     
     // create coordinate frame with a and b, where b is tangent to the object intersection
     Vector_corss(normal, direction, a);
@@ -260,7 +260,8 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     double sin_theta = Vector_dot(direction, b);
     double sin_phi = (out_ior / in_ior) * sin_theta;
     double cos_phi = sqrt(1 - sqr(sin_phi));
-    Vector_scale(normal, -1*cos_phi, normal);
+    
+    Vector_scale(normal, -cos_phi, normal);
     Vector_scale(b, sin_phi, b);
     Vector_add(normal , b, refracted_vector);
 }
@@ -362,6 +363,7 @@ void recursive_shade(Ray *ray, int object_index, double t,int rec_level, Vector 
         .origin = {new_origin[0], new_origin[1], new_origin[2]},
         .direction = {reflection[0], reflection[1], reflection[2]}
     };
+    
     normalize(ray_reflected.direction);
     get_best_solution(&ray_reflected,object_index, INFINITY, &best_object_index, &best_t);
     
