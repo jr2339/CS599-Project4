@@ -253,7 +253,7 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     Vector_copy(direction, dir);
     Vector_copy(position, pos);
     normalize(dir);
-    //normalize(pos);
+    normalize(pos);
     
     double in_ior = get_ior(object_index);
     
@@ -282,6 +282,7 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     Vector_scale(b, sin_phi, b);
     Vector_add(normal , b, refracted_vector);
 }
+
 /*==================================================================================================*/
 /*This is almost same code from project3 which is shade in project3 */
 void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, double max_dist, Vector color) {
@@ -465,8 +466,8 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
             Vector_sub(ray_refracted.direction, new_ray.origin, new_ray.direction);
             normalize(new_ray.direction);
             
-            //original_shade(&new_ray, object_index, ray->direction, &refraction_light, INFINITY, color);
-            Vector_add(color, refraction_color, color);
+            original_shade(&new_ray, object_index, ray->direction, &refraction_light, INFINITY, color);
+            //Vector_add(color, refraction_color, color);
         }
         if (reflect_coefficient == -1) {
             reflect_coefficient = 0;
