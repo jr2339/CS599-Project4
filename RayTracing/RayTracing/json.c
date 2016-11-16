@@ -29,9 +29,11 @@ int num_objects;
 // number maintenance
 int next_c(FILE* json) {
     int c = fgetc(json);
+/*
 #ifdef DEBUG
     printf("next_c: '%c'\n", c);
 #endif
+*/
     if (c == '\n') {
         line++;;
     }

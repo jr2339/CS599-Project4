@@ -38,7 +38,6 @@ void shade_pixel(double *color, int row, int col,Image *image){
 
 /*==================================================================================================*/
 double plane_intersection(Ray *ray, double *Pos, double *Norm){
-    //printf("plane_intersection starting works\n");
     double alph,delta;
     normalize(Norm);
     
@@ -215,7 +214,7 @@ double get_refractivity(int object_index) {
         return objects[object_index].quadric.refract;
     }
     else {
-        fprintf(stderr, "Error: get_reflectivity: Specified object does not have a reflect property\n");
+        fprintf(stderr, "Error: get_reflectivity: Can't find refract property for this project\n");
         return -1;
     }
 }
@@ -232,12 +231,12 @@ double get_ior(int object_index){
         ior = objects[object_index].quadric.ior;
     }
     else {
-        fprintf(stderr, "Error: get_ior: Specified object does not have an ior property\n");
+        fprintf(stderr, "Error: get_ior: Can't find ior property for this project\n");
         exit(1);
-    }
+    }/*
     if (fabs(ior) < 0.0001)
         return 1;
-    else
+    else*/
         return ior;
 }
 /*==================================================================================================*/
@@ -279,7 +278,7 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     double sin_phi = (out_ior / in_ior) * sin_theta;
     double cos_phi = sqrt(1 - sqr(sin_phi));
     
-    Vector_scale(normal, -1*cos_phi, normal);
+    Vector_scale(normal, -cos_phi, normal);
     Vector_scale(b, sin_phi, b);
     Vector_add(normal , b, refracted_vector);
 }
@@ -350,13 +349,13 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
 /*==================================================================================================*/
 void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int rec_level, Vector color) {
     if (rec_level > MAX_REC_LEVEL) {
-        // return black color
+        // if the recursive times more than MAX Times, then we return black color
         Vector_scale(color, 0, color);
         return;
     }
-
-    if (object_index == -1) {  // base case, no intersecting object had been found, so return black
-        //scale_color(color, 0, color);
+     // base case, no intersection object, so set color is black
+    if (object_index == -1) {
+        Vector_scale(color, 0, color);
         return;
     }
     if (ray == NULL) {
@@ -397,9 +396,17 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
         .origin = {new_origin[0], new_origin[1], new_origin[2]},
         .direction = {refraction[0], refraction[1], refraction[2]}
     };
-    
+    // add some tiny things
+    Vector reflected_offset = {0,0,0};
+    Vector_scale(ray_reflected.direction, 0.01, reflected_offset);
+    Vector_add(ray_reflected.direction, reflected_offset, ray_reflected.direction);
     normalize(ray_reflected.direction);
+    
+    Vector refracted_offset ={0,0,0};
+    Vector_scale(ray_refracted.direction, 0.01, refracted_offset);
+    Vector_add(ray_refracted.direction,refracted_offset , ray_refracted.direction);
     normalize(ray_refracted.direction);
+    
     get_best_solution(&ray_reflected,object_index, INFINITY, &best_reflection_object_index, &best_reflection_t);
     //get_best_solution(&ray_refracted,-1, INFINITY, &best_refraction_object_index, &best_refraction_t);
     
@@ -443,20 +450,19 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
             Vector_copy(reflection_color, reflection_light.color);
             
             Vector_scale(ray_reflected.direction, best_reflection_t, ray_reflected.direction);
-            Vector_sub(ray_reflected.direction, new_ray.origin, new_ray.direction);
+            Vector_add(ray_reflected.direction, new_ray.origin, new_ray.direction);
             normalize(new_ray.direction);
             original_shade(&new_ray, object_index, ray->direction, &reflection_light, INFINITY, color);
         }
         if (best_refraction_object_index >= 0) {
             refract_ior = get_ior(best_refraction_object_index);
-            Vector_scale(ray_refracted.direction, 0.01, ray_refracted.direction);
             recursive_shade(&ray_refracted, best_refraction_object_index, best_refraction_t, refract_ior, rec_level+1, refraction_color);
             Vector_scale(refraction_color, refract_coefficient, refraction_color);
             Vector_scale(refraction, -1, refraction_light.direction);
             Vector_copy(refraction_color, refraction_light.color);
             
             Vector_scale(ray_refracted.direction, best_refraction_t, ray_refracted.direction);
-            Vector_sub(ray_refracted.direction, new_ray.origin, new_ray.direction);
+            Vector_add(ray_refracted.direction, new_ray.origin, new_ray.direction);
             normalize(new_ray.direction);
             original_shade(&new_ray, object_index, ray->direction, &refraction_light, INFINITY, color);
         }
