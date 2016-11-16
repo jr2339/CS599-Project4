@@ -233,10 +233,10 @@ double get_ior(int object_index){
     else {
         fprintf(stderr, "Error: get_ior: Can't find ior property for this project\n");
         exit(1);
-    }/*
+    }
     if (fabs(ior) < 0.0001)
         return 1;
-    else*/
+    else
         return ior;
 }
 /*==================================================================================================*/
@@ -253,19 +253,19 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     Vector_copy(direction, dir);
     Vector_copy(position, pos);
     normalize(dir);
-    normalize(pos);
+    //normalize(pos);
     
     double in_ior = get_ior(object_index);
     
     if (in_ior == out_ior) {
         in_ior =1;
     }
-    
-    
+
     Vector normal, a, b;
     
     // find normal vector of current object
     get_normal(object_index, pos, normal);
+
     normalize(normal);
     
     // create coordinate frame with a and b, where b is tangent to the object intersection
@@ -278,7 +278,7 @@ void refraction_vector(Vector direction, Vector position, int object_index, doub
     double sin_phi = (out_ior / in_ior) * sin_theta;
     double cos_phi = sqrt(1 - sqr(sin_phi));
     
-    Vector_scale(normal, -cos_phi, normal);
+    Vector_scale(normal, -1*cos_phi, normal);
     Vector_scale(b, sin_phi, b);
     Vector_add(normal , b, refracted_vector);
 }
@@ -321,9 +321,9 @@ void original_shade(Ray *ray, int object_index, Vector position, LIGHT *light, d
     Vector_reflect(L, normal, R);
     Vector_copy(position, V);
     Vector diffuse_color;
-    Vector_scale(diffuse_color, 0, diffuse_color);
+    //Vector_scale(diffuse_color, 0, diffuse_color);
     Vector specular_color;
-    Vector_scale(specular_color, 0, specular_color);
+    //Vector_scale(specular_color, 0, specular_color);
     
     get_diffuse(normal, L, light->color, object_diff_color, diffuse_color);
     get_specular(SHININESS, L, R, normal, V, object_spec_color, light->color, specular_color);
@@ -399,12 +399,12 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
     // add some tiny things
     Vector reflected_offset = {0,0,0};
     Vector_scale(ray_reflected.direction, 0.01, reflected_offset);
-    Vector_add(ray_reflected.direction, reflected_offset, ray_reflected.direction);
+    Vector_add(ray_reflected.origin, reflected_offset, ray_reflected.origin);
     normalize(ray_reflected.direction);
     
     Vector refracted_offset ={0,0,0};
     Vector_scale(ray_refracted.direction, 0.01, refracted_offset);
-    Vector_add(ray_refracted.direction,refracted_offset , ray_refracted.direction);
+    Vector_add(ray_refracted.origin,refracted_offset , ray_refracted.origin);
     normalize(ray_refracted.direction);
     
     get_best_solution(&ray_reflected,object_index, INFINITY, &best_reflection_object_index, &best_reflection_t);
@@ -450,7 +450,7 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
             Vector_copy(reflection_color, reflection_light.color);
             
             Vector_scale(ray_reflected.direction, best_reflection_t, ray_reflected.direction);
-            Vector_add(ray_reflected.direction, new_ray.origin, new_ray.direction);
+            Vector_sub(ray_reflected.direction, new_ray.origin, new_ray.direction);
             normalize(new_ray.direction);
             original_shade(&new_ray, object_index, ray->direction, &reflection_light, INFINITY, color);
         }
@@ -462,9 +462,11 @@ void recursive_shade(Ray *ray, int object_index, double t,double current_ior,int
             Vector_copy(refraction_color, refraction_light.color);
             
             Vector_scale(ray_refracted.direction, best_refraction_t, ray_refracted.direction);
-            Vector_add(ray_refracted.direction, new_ray.origin, new_ray.direction);
+            Vector_sub(ray_refracted.direction, new_ray.origin, new_ray.direction);
             normalize(new_ray.direction);
-            original_shade(&new_ray, object_index, ray->direction, &refraction_light, INFINITY, color);
+            
+            //original_shade(&new_ray, object_index, ray->direction, &refraction_light, INFINITY, color);
+            Vector_add(color, refraction_color, color);
         }
         if (reflect_coefficient == -1) {
             reflect_coefficient = 0;
